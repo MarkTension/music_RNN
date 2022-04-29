@@ -1,0 +1,6 @@
+scikit-learn
+pandas
+hmmlearn
+pyyaml
+music21
+mido

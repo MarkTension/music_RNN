@@ -5,3 +5,5 @@
 /output/
 /training_checkpoints/
 /scartch/
+/results
+/__pycache__
