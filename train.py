@@ -1,5 +1,5 @@
 
-from time import time
+import time
 # import time
 import tensorflow as tf
 from model import MusicRNN, OneStep
@@ -26,12 +26,15 @@ def train(training_data,  config):
   checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt_{epoch}")
   mean = tf.metrics.Mean()
 
+  # training loop
   for epoch in range(config.epochs):
       start = time.time()
 
       mean.reset_states()
       for (batch_n, (inp, target)) in enumerate(training_data):
-
+          
+          temp_tensor = a = tf.zeros([32,1,4], dtype=tf.int64)
+          inp_new = tf.concat([inp, temp_tensor], axis=1)
           for i in range(4):
             one_voice_target = target[:, :, i]
             logs = models[i].train_step([inp, one_voice_target])
@@ -51,9 +54,6 @@ def train(training_data,  config):
       print("_"*80)
 
   return models
-
-
-
 
 
 def sample(models, config):
