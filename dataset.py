@@ -23,13 +23,16 @@ class Dataclass:
 
     if os.path.exists(data_out):
       # load data
-      return self._create_dataset() #NotImplementedError("cannot load data yet")
+      return tf.data.experimental.load(data_out)
     else:
       print("making new data")
-      # create path 
-      os.makedirs(data_out)
       # create data
-      return self._create_dataset()
+      training_data = self._create_dataset()
+
+      # save dataset
+      tf.data.experimental.save(training_data, data_out)
+
+      return training_data
 
 
   def _create_dataset(self):
@@ -40,8 +43,12 @@ class Dataclass:
     for i, df in enumerate(chorales_dfs):
       # normalize data
       df = self._normalize_data(df)
+
       # set tempo
       df = self._set_tempo_data(df)
+
+      df = self._make_sequential(df)
+
       # make midi from data
       # midi_file = get_midi_from_numbers(df.to_numpy(), self.data_details.version)
       # # save midi data
@@ -59,11 +66,7 @@ class Dataclass:
       training_data.append(df)
 
     training_data = pd.concat(training_data)
-
-    training_data.drop(['time'], axis=1, inplace=True)
-
     training_data = training_data.to_numpy()
-
     tf_dataset = self._create_tf_data(training_data)
 
     return tf_dataset
@@ -80,19 +83,39 @@ class Dataclass:
     df = df % 12
     return df
 
+  def _make_sequential(self, df):
+    
+    notes = []
+    timings = []
+
+    for _, row in df.iterrows():
+
+      timings.extend([row.time, 0, 0, 0])
+      notes.append(row.note0)
+      notes.append(row.note2)
+      notes.append(row.note1)
+      notes.append(row.note3)
+
+    df = pd.DataFrame({"notes": notes, "timings": timings})
+    return df
+
   def _set_tempo_data(self, df):
     
     # add time column
     df['time'] = (df.index) % 16
-    df['time'] = df['time'].map(lambda x: map_to_fourths(x))
+    df['time'] = 1 #df['time'].map(lambda x: map_to_fourths(x)) + 1
     
-    # add ending
-    df2 = pd.DataFrame(np.full(fill_value=12,shape=(4, df.shape[1])))
-    df2.columns = df.columns
-    df2['time'] = 5
-    combined = pd.concat([df2, df])
+    # add start and end
+    df_end = pd.DataFrame(np.full(fill_value=13,shape=(1, df.shape[1])))
+    df_end.columns = df.columns
+    df_end['time'] = 2
+    df_start = pd.DataFrame(np.full(fill_value=12,shape=(1, df.shape[1])))
+    df_start.columns = df.columns
+    df_start['time'] = 2
+    df = pd.concat([df_start, df], axis=0)
+    df = pd.concat([df, df_end], axis=0)
     
-    return combined
+    return df
 
 
   def _convert_to_json(self, df, version):
@@ -109,7 +132,6 @@ class Dataclass:
     for ids in training_data_tf.take(10):
         print(ids)
     
-    
     print(f"examples per epoch is {len(training_data)}")
 
     sequences = training_data_tf.batch(self.data_details.seq_length+1, drop_remainder=True)
@@ -122,7 +144,7 @@ class Dataclass:
     dataset = sequences.map(split_input_target)
 
     # Batch size
-    BATCH_SIZE = 32
+    BATCH_SIZE = 64
     BUFFER_SIZE = 10000
 
     dataset = (

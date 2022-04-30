@@ -3,13 +3,13 @@
 data_details : 
   raw : "./data/jsb_chorales/all"
   out : "./data/jsb_chorales/processed"
-  version: "version_1_seq_256"
-  seq_length: 16
+  version: "version_1_tfdata_seq_256_easy_timesig"
+  seq_length: 128
 
-epochs: 20
-rnn_units : 128
-embedding_dim: 16
-vocab_size: 13 # 12 notes and a rest
+epochs: 100
+rnn_units : 512
+embedding_dim: 32
+vocab_size: 14 # 12 notes + start token + end token
 
-run_name : "base_model_dev_seq_128_rollout"
+run_name : "v2_single_model_3_GRUs"
 do_training: True

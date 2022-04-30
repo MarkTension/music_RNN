@@ -1,18 +1,12 @@
 import numpy as np
 import os
 from pip import main
-import scipy
 from hmmlearn import hmm
 import yaml
-import tensorflow as tf
 import numpy as np
 import os
-import time
-
 
 from dataset import Dataclass
-from model import OneStep
-from midi_utils import get_midi_from_numbers
 from train import train, sample
 
 
