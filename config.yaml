@@ -7,10 +7,9 @@ data_details :
   seq_length: 16
 
 epochs: 20
-rnn_units : 256
+rnn_units : 128
 embedding_dim: 16
 vocab_size: 13 # 12 notes and a rest
 
-run_name : "base_model_dev_seq_256"
-checkpoint_root : './training_checkpoints'
+run_name : "base_model_dev_seq_128_rollout"
 do_training: True

@@ -9,3 +9,6 @@ It's like they're all improvising together, because the music is not scripted, e
 
 run via 
 python main.py
+
+### moreover
+I tried to code this, adhering to best practices, and with maximum customizability in the use of tensorflow. This way I'd like to use it as a template for future projects.
