@@ -7,6 +7,9 @@ class MusicRNN(tf.keras.Model):
         self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim) # , input_length=16
         self.gru = tf.keras.layers.GRU(rnn_units,
                                     return_sequences=True,
+                                    return_state=True)
+        self.gru2 = tf.keras.layers.GRU(rnn_units,
+                                    return_sequences=True,
                                     return_state=True) # TODO: check how this qworks. Does it step over the sequence? 
         self.dense = tf.keras.layers.Dense(vocab_size)
         self.softmax = tf.keras.layers.Softmax(axis=-1)
@@ -20,6 +23,7 @@ class MusicRNN(tf.keras.Model):
             states = self.gru.get_initial_state(x)
         
         x, states = self.gru(x, initial_state=states, training=training)
+        # x, states = self.gru2(x, initial_state=states, training=training)
         x = self.dense(x, training=training)
 
         if return_state:

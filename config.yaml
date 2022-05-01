@@ -6,10 +6,10 @@ data_details :
   version: "version_1_seq_256"
   seq_length: 16
 
-epochs: 20
-rnn_units : 128
+epochs: 40
+rnn_units : 256
 embedding_dim: 16
 vocab_size: 13 # 12 notes and a rest
 
-run_name : "base_model_dev_seq_128_rollout"
+run_name : "v3_multimodels_256_40epoch"
 do_training: True
