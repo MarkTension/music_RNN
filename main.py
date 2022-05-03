@@ -1,14 +1,11 @@
-import numpy as np
 import os
-from pip import main
-from hmmlearn import hmm
+# from hmmlearn import hmm
 import yaml
 import numpy as np
 import os
 
 from dataset import Dataclass
 from train import train, sample
-
 
 
 """
@@ -49,7 +46,6 @@ def main(config):
   sample(models, config)
 
   # https://www.tensorflow.org/text/tutorials/text_generation
-
 
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""

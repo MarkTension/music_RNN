@@ -1,11 +1,11 @@
 
 import time
 import tensorflow as tf
-from model import MusicRNN, OneStep
+from model import MusicRNN
 from midi_utils import get_midi_from_numbers
 import os
 import numpy as np
-
+import pandas as pd
 
 def train(training_data,  config):
 
@@ -37,11 +37,11 @@ def train(training_data,  config):
 
       mean.reset_states()
       for (batch_n, (inp, target)) in enumerate(training_data):
-          
+        
         logs = model.train_step([inp, target[:,:,0]])
         mean.update_state(logs['loss'])
 
-        if batch_n % 50 == 0:
+        if batch_n % 20 == 0:
           template = f"Epoch {epoch+1} Batch {batch_n} Loss {logs['loss']:.4f}"
           print(template)
 
@@ -64,7 +64,7 @@ def sample(model, config):
 
   input = tf.constant([[[12, 5]]], dtype=tf.int64)
 
-  for _n in range(4000):
+  for _n in range(1000):
     pred, state = one_step_model.generate_one_step(
         input, states=state)
     
@@ -81,7 +81,39 @@ def sample(model, config):
       new[i % 4].extend(el.numpy())
 
   result = np.array(new)
+
+  # save to json
+  df = pd.DataFrame({"note0": result[0], "note1": result[1], "note2": result[2], "note3": result[3]})
+  json_out_dir = os.path.join("results", config.run_name, f"_{config.epochs}_epochs.json")
+
+  df.to_json(json_out_dir)
+
+
   midi = get_midi_from_numbers(result.transpose(), config.data_details['version'])
-  midi_out_dir = os.path.join("results", config.run_name, f"midi_{config.epochs}_epochs222.mid")
+  midi_out_dir = os.path.join("results", config.run_name, f"midi_{config.epochs}_epochs.mid")
   # midi.save("test.mid")
   midi.save(midi_out_dir)     
+
+
+class OneStep(tf.keras.Model):
+  def __init__(self, model, temperature=1.0):
+    super().__init__()
+    self.temperature = temperature
+    self.model = model
+
+  def generate_one_step(self, inputs, states=None):
+
+    # Run the model.
+    # predicted_logits.shape is [batch, char, next_char_logits]
+    predicted_logits, states = self.model(inputs=inputs, states=states,
+                                          return_state=True, training=False)
+    # Only use the last prediction.
+    predicted_logits = predicted_logits[:, -1, :]
+    predicted_logits = predicted_logits/self.temperature
+
+    # Sample the output logits to generate token IDs.
+    predicted_ids = tf.random.categorical(predicted_logits, num_samples=1)
+    predicted_ids = tf.squeeze(predicted_ids, axis=-1)
+
+    # Return the characters and model state.
+    return predicted_ids, states

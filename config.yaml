@@ -1,15 +1,18 @@
 
 
 data_details : 
-  raw : "./data/jsb_chorales/all"
+  # raw : "./data/jsb_chorales/all"
+  raw : "./data/jsb_chorales/jsb16thSeparated.json"
   out : "./data/jsb_chorales/processed"
-  version: "version_1_tfdata_seq_256_easy_timesig"
+  version: "version_4_16th_notes_transposed_seq_128_octaved" # used to be 8th
   seq_length: 128
+  token_empty_note: 12 # change this back
+  token_reset_song: 13
 
-epochs: 100
+epochs: 130
 rnn_units : 512
 embedding_dim: 32
-vocab_size: 14 # 12 notes + start token + end token
+vocab_size: 14  # 12 notes + reset token(12)  reset song token is always incorrect + no-note(13)
 
-run_name : "v2_single_model_3_GRUs"
+run_name : "v12_16th_notes_seq_128_transposed_octaved" # v5_8th_notes_seq_32_transposed was goood
 do_training: True
