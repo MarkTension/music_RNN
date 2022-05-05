@@ -63,15 +63,10 @@ minors = dict(
   ("G-", 3), ("G", 2)])
 
 
-def tranpose_midi_notes(midi_file_name, midi_file, df, data_out_dir, filenumber):
+def tranpose_midi_notes(midi_file_name, midi_file, df, transposition):
 
-  analysisfile_path = os.path.exists(os.path.join(data_out_dir, "midi_analysis.csv"))
-  if (analysisfile_path):
-    # load description
-    raise NotImplementedError("yet to do")
-    analysis_df = pd.read_csv(analysisfile_path)
-    halfStepsTranspose = analysis_df.loc[analysis_df['filename'] == filenumber, 'transpose']
-
+  if transposition != None:
+    halfStepsTranspose = transposition
   else:
     # save the midi file to load it with music21
     # music21 will be used for keysignature analysis and major/minor
@@ -92,4 +87,4 @@ def tranpose_midi_notes(midi_file_name, midi_file, df, data_out_dir, filenumber)
   # after analysis, transpose it in pandas
   df = df + halfStepsTranspose
 
-  return df
+  return df, halfStepsTranspose

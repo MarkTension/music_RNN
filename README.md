@@ -12,3 +12,8 @@ python main.py
 
 ### moreover
 I tried to code this, adhering to best practices, and with maximum customizability in the use of tensorflow. This way I'd like to use it as a template for future projects.
+
+
+
+### good models
+v13_16th_notes_seq_128_transposed_attention is quite good. The attention layer really seems to work well.

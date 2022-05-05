@@ -5,7 +5,7 @@ import numpy as np
 import os
 
 from dataset import Dataclass
-from train import train, sample
+from train import train, sample, load_model
 
 
 """
@@ -14,6 +14,7 @@ from train import train, sample
 - For notes with a longer duration, we use “hold” symbols to encode their length
     - hold uses a tuple to encode a hold: [(C4, 0), (C4, 1), (C4, 1), (C4, 1)]
 - RESTS are encode with a rest symbol
+- check this out: https://www.tensorflow.org/tutorials/audio/music_generation
 """
 
 
@@ -23,8 +24,6 @@ from train import train, sample
 #    - data directory
 #    - checkpoint loading
 # - experiment with more models
-#     - add timing 
-#     - add empty notes OG HAS NO EMPTY NOTES!!
 #     - experiment with bigger models
 
 
@@ -39,11 +38,15 @@ def main(config):
   # model.fit(training_data)
   # feature_matrix , state_sequence = model.sample(100)
 
+  model = None
   # The embedding dimension
-  print('starting training')
-  models = train(training_data, config)
+  if (not config.sampling_mode):
+    print('starting training')
+    model = train(training_data, config)
+  if model == None:
+    model = load_model(config, training_data)
   print('sampling, and generating midi')
-  sample(models, config)
+  sample(model, config, training_data)
 
   # https://www.tensorflow.org/text/tutorials/text_generation
 
@@ -68,10 +71,10 @@ if __name__ == "__main__":
   if (not os.path.exists(f"results/{config_dot.run_name}")):
     os.makedirs(f"results/{config_dot.run_name}")
     os.makedirs(f"results/{config_dot.run_name}/training_checkpoints")
-  
+
   # save for future ref
   with open(f"results/{config_dot.run_name}/config.yaml", 'w') as file:
-    documents = yaml.dump(config, file) 
+    documents = yaml.dump(config, file)
 
   # run scripts
   main(config_dot)
