@@ -1,19 +1,13 @@
 import os
-# from hmmlearn import hmm
 import yaml
-import numpy as np
 import os
 
+from sample import sample
 from dataset import Dataclass
-from train import train, sample, load_model
+from train import train, load_model
 
 
 """
-- The MIDI pitches liein the range from MIDI number 36 to 81
-- We quantize time into sixteenthnote,
-- For notes with a longer duration, we use “hold” symbols to encode their length
-    - hold uses a tuple to encode a hold: [(C4, 0), (C4, 1), (C4, 1), (C4, 1)]
-- RESTS are encode with a rest symbol
 - check this out: https://www.tensorflow.org/tutorials/audio/music_generation
 """
 

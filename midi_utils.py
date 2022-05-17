@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pandas as pd
 
-def get_midi_from_numbers(source, version):
+def get_midi_from_numbers(source, version, velocities=None):
   """
   It is beneficial to train the system with all files in the same key so that they create harmonies rather than discordance
   take dataframe (source), and returns midi file. called for creating training data, and after inference.
@@ -28,6 +28,7 @@ def get_midi_from_numbers(source, version):
     # append to full midi
     mid.tracks.append(track)
 
+  # go through numbers
   for voice in range(4):
     actionKindPrevious = -1
     notelength=0
