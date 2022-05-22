@@ -15,13 +15,12 @@ class MusicRNN(tf.keras.Model):
         self.gru1 = tf.keras.layers.GRU(rnn_units,
                                 return_sequences=True,
                                 return_state=True)
-        self.gru2 = tf.keras.layers.GRU(rnn_units,
-                                return_sequences=True,
-                                return_state=True)
+        # self.gru2 = tf.keras.layers.GRU(rnn_units,
+        #                         return_sequences=True,
+        #                         return_state=True)
 
-        # self.dense = tf.keras.layers.Dense(256)
+        self.dense = tf.keras.layers.Dense(256) # 256
         self.dense_out = tf.keras.layers.Dense(vocab_size)
-        self.softmax = tf.keras.layers.Softmax(axis=-1)
 
     # @tf.function
     def call(self, inputs, states=None, return_state=False, training=True):
@@ -38,10 +37,10 @@ class MusicRNN(tf.keras.Model):
         
         x, states = self.gru(x, initial_state=states, training=training)
         x, states = self.gru1(x, initial_state=states, training=training)
-        x, states = self.gru2(x, initial_state=states, training=training)
+        # x, states = self.gru2(x, initial_state=states, training=training)
         
         x = tf.reshape(x, shape=[x.shape[0], -1])
-        # x = self.dense(x, training=training)
+        x = self.dense(x, training=training)
 
         x = self.dense_out(x, training=training)
 

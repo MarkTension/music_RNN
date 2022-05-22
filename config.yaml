@@ -10,10 +10,10 @@ data_details :
   token_reset_song: 19
 
 epochs: 100
-rnn_units : 128
+rnn_units : 256
 embedding_dim: 32
 vocab_size: 86  # 12 notes + reset token(12)  reset song token is always incorrect + no-note(13)
-run_name : "v20_three_grus" # v5_8th_notes_seq_32_transposed was goood
+run_name : 'v20_100_dense' #"v19_new_architecture_better_data_bigger_rnn" # v5_8th_notes_seq_32_transposed was goood
 
-num_notes_sampled: 400
-sampling_mode: False
+num_notes_sampled: 45
+sampling_mode: True
