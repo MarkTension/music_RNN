@@ -1,6 +1,8 @@
 /data/processed
-/data/train
-/data/test
+/data/jsb_chorales/processed/
+/data/jsb_chorales/train/
+/data/jsb_chorales/test/
+/data/jsb_chorales/valid/
 /data/valid
 /MIDIout/
 /C_data/
@@ -10,3 +12,4 @@
 /scartch/
 /results
 /__pycache__
+snapshot.metadata

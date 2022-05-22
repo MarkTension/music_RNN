@@ -6,6 +6,8 @@ import numpy as np
 # from matplotlib import pyplot as plt
 import os
 from midi_utils import get_midi_from_numbers, tranpose_midi_notes
+import json
+from mido import MidiFile
 
 import tensorflow as tf
 
@@ -23,13 +25,21 @@ class Dataclass:
 
     if os.path.exists(data_out):
       # load data
-      return self._create_dataset() #NotImplementedError("cannot load data yet")
+      return tf.data.experimental.load(data_out)
     else:
       print("making new data")
-      # create path 
-      os.makedirs(data_out)
+
+      # create midi dir
+      path = os.path.join(self.data_details.out, self.data_details.version)
+      os.makedirs(path)
+      os.makedirs(os.path.join(path, 'transposed'))
       # create data
-      return self._create_dataset()
+      training_data = self._create_dataset()
+
+      # save dataset
+      tf.data.experimental.save(training_data, data_out)
+
+      return training_data
 
 
   def _create_dataset(self):
@@ -37,62 +47,124 @@ class Dataclass:
     # load data
     chorales_dfs = self._load_data(self.data_details.raw)
     training_data = []
+
+    # load transpositions
+    transpositions_path = os.path.join(self.data_details.out, "midi_analysis.npy")
+    if (os.path.exists(transpositions_path)):
+      transpositions = np.load(transpositions_path, allow_pickle=True)
+    else:
+      transpositions = np.array([None]*len(chorales_dfs))
+
     for i, df in enumerate(chorales_dfs):
       # normalize data
-      df = self._normalize_data(df)
+      df, empty_notes_df = self._normalize_data(df)
+      # make midi from data
+      midi_file = get_midi_from_numbers(df.to_numpy(), self.data_details.version)
+      # save midi data to get read by music21 fors transposition
+      midi_file_name = f"{self.data_details.out}/{self.data_details.version}/{i}.mid"
+      # transpose midi notes
+      df, transpositions[i] = tranpose_midi_notes(midi_file_name, midi_file, df, transpositions[i])
+      # normalize to one octave again after transpose
+      # refill empty notes after transpose
+      df[empty_notes_df == np.nan] = self.data_details.token_empty_note
       # set tempo
       df = self._set_tempo_data(df)
-      # make midi from data
-      # midi_file = get_midi_from_numbers(df.to_numpy(), self.data_details.version)
-      # # save midi data
-      # midi_file_name = f"{self.data_details.out}/{self.data_details.version}/{i}.mid"
-      
-      # # for a preview:
-      # if (i == 0):
-      #   midi_file.save(midi_file_name)
-      #   self._convert_to_json(df, self.data_details.version)
-
-      # # transpose notes
-      # midi_file = tranpose_midi_notes(midi_file_name)
-      # save the data
+      # make sequential
+      df = self._make_sequential(df)
 
       training_data.append(df)
 
+    # save for future reference
+    if (not os.path.exists(transpositions_path)):
+      np.save(transpositions_path, transpositions)
+
     training_data = pd.concat(training_data)
-
-    training_data.drop(['time'], axis=1, inplace=True)
-
     training_data = training_data.to_numpy()
-
     tf_dataset = self._create_tf_data(training_data)
 
     return tf_dataset
 
+  # def _load_data(self, datapath):
+  #     files = os.listdir(datapath)
+  #     dfs = []
+  #     for chorale in files:
+  #       dfs.append(pd.read_csv(f'{datapath}/{chorale}'))
+  #     return dfs
+
   def _load_data(self, datapath):
-      files = os.listdir(datapath)
-      dfs = []
-      for chorale in files:
-        dfs.append(pd.read_csv(f'{datapath}/{chorale}'))
-      return dfs
+
+    # Opening JSON file
+    with open(datapath) as json_file:
+        data = json.load(json_file)
+
+    dfs = []
+
+    for chorale in data['train']:
+
+      voice0 = []
+      voice1 = []
+      voice2 = []
+      voice3 = []
+
+      for row in chorale:
+        if (len(row) == 4):
+          voice0.append(row[0])
+          voice1.append(row[1])
+          voice2.append(row[2])
+          voice3.append(row[3])
+
+      df = pd.DataFrame({"note0": voice0, "note1": voice1, "note2": voice2, "note3": voice3})
+      dfs.append(df)
+
+    return dfs
 
   def _normalize_data(self, df):
-    # squeeze to octave
-    df = df % 12
+    """
+    here we normalize every note to one octave. 
+    Also locations of empty notes are returned. 
+    These are temporarily filled with root notes for transpose program. Later they're assigned the proper note
+    """
+    # squeeze to octave. Ignore negatives, these are rests
+    # df[df >= 0 ] = df % 12
+
+    # save locations of empty notes
+    empty_notes_df = df[df == -1]
+    
+    # temporarilty set empty notes to the most common note.
+    mode = df['note0'].mode()[0]
+    df = df.replace(-1, mode)
+
+    return df, empty_notes_df
+
+  def _make_sequential(self, df):
+    
+    notes = []
+    timings = []
+
+    for _, row in df.iterrows():
+
+      timings.extend([row.time, 0, 0, 0]) # row.time is just 1s
+      notes.append(row.note0)
+      notes.append(row.note2)
+      notes.append(row.note1)
+      notes.append(row.note3)
+
+    df = pd.DataFrame({"notes": notes, "timings": timings})
     return df
 
   def _set_tempo_data(self, df):
     
     # add time column
     df['time'] = (df.index) % 16
-    df['time'] = df['time'].map(lambda x: map_to_fourths(x))
+    df['time'] = 1 #df['time'].map(lambda x: map_to_fourths(x)) + 1
     
-    # add ending
-    df2 = pd.DataFrame(np.full(fill_value=12,shape=(4, df.shape[1])))
-    df2.columns = df.columns
-    df2['time'] = 5
-    combined = pd.concat([df2, df])
+    # add start and end
+    # df_reset = pd.DataFrame(np.full(fill_value=self.data_details.token_reset_song,shape=(1, df.shape[1])))
+    # df_reset.columns = df.columns
+    # df_reset['time'] = 2
+    # df = pd.concat([df_reset, df], axis=0)
     
-    return combined
+    return df
 
 
   def _convert_to_json(self, df, version):
@@ -109,26 +181,26 @@ class Dataclass:
     for ids in training_data_tf.take(10):
         print(ids)
     
-    
     print(f"examples per epoch is {len(training_data)}")
 
     sequences = training_data_tf.batch(self.data_details.seq_length+1, drop_remainder=True)
 
     def split_input_target(sequence):
       input_text = sequence[:-1]
-      target_text = sequence[1:]
+      target_text = sequence[-1:]
       return input_text, target_text
 
     dataset = sequences.map(split_input_target)
 
     # Batch size
-    BATCH_SIZE = 32
+    BATCH_SIZE = 64
     BUFFER_SIZE = 10000
 
     dataset = (
         dataset
         .shuffle(BUFFER_SIZE)
         .batch(BATCH_SIZE, drop_remainder=True)
+        .cache()
         .prefetch(tf.data.experimental.AUTOTUNE))
 
     return dataset
