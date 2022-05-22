@@ -1,88 +1,95 @@
 
 import time
-# import time
 import tensorflow as tf
-from model import MusicRNN, OneStep
-from midi_utils import get_midi_from_numbers
+from model import MusicRNN
 import os
 
 
 def train(training_data,  config):
 
-  loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
-  models = []
+  # for some reason CPU is faster to train
+  os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-  for i in range(4):
-    models.append(MusicRNN(
+  loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
+
+  model = MusicRNN(
         vocab_size=config.vocab_size,
         embedding_dim=config.embedding_dim,
-        rnn_units=config.rnn_units))
+        rnn_units=config.rnn_units)
 
-    # models[i].compile(optimizer='adam', loss=loss)
-    models[i].compile(optimizer='RMSprop', loss=loss)
+  lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+    initial_learning_rate=5e-4,
+    decay_steps=5000,
+    decay_rate=0.9)
+
+  optimizer = tf.keras.optimizers.RMSprop(learning_rate=lr_schedule)
+
+  # models[i].compile(optimizer='adam', loss=loss)
+  model.compile(optimizer=optimizer, loss=loss)
 
   # Directory where the checkpoints will be saved
   checkpoint_dir = f'./results/{config.run_name}/training_checkpoints/'
-  checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt_{epoch}")
+  checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt") # _{epoch}
+  checkpoint = tf.train.Checkpoint(model=model) # optimizer='RMSprop',
+
   mean = tf.metrics.Mean()
 
+  for input_example_batch, target_example_batch in training_data.take(1):
+    example_batch_predictions = model(input_example_batch)
+    print(example_batch_predictions.shape, "# (batch_size, sequence_length, vocab_size)")
+
+  # model.load_weights(checkpoint_dir + "checkpoint_29.index")
   # training loop
   for epoch in range(config.epochs):
       start = time.time()
 
       mean.reset_states()
       for (batch_n, (inp, target)) in enumerate(training_data):
-          
-          temp_tensor = a = tf.zeros([32,1,4], dtype=tf.int64)
-          inp_new = tf.concat([inp, temp_tensor], axis=1)
-          for i in range(4):
-            one_voice_target = target[:, :, i]
-            logs = models[i].train_step([inp, one_voice_target])
-            mean.update_state(logs['loss'])
+        
+        logs = model.train_step([inp, target[:,:,0]])
+        mean.update_state(logs['loss'])
 
-          if batch_n % 50 == 0:
-              template = f"Epoch {epoch+1} Batch {batch_n} Loss {logs['loss']:.4f}"
-              print(template)
+        if batch_n % 20 == 0:
+          template = f"Epoch {epoch+1} Batch {batch_n} Loss {logs['loss']:.4f}"
+          print(template)
 
       # saving (checkpoint) the model every 5 epochs
       if (epoch + 1) % 5 == 0:
-        for model in models:
-          model.save_weights(checkpoint_prefix.format(epoch=epoch))
+          # model.save_weights(checkpoint_prefix.format(epoch=epoch))
+          checkpoint.save(checkpoint_prefix)
+
 
       print(f'Epoch {epoch+1} Loss: {mean.result().numpy():.4f}')
       print(f'Time taken for 1 epoch {time.time() - start:.2f} sec')
       print("_"*80)
 
-  return models
+  checkpoint.save(f"{checkpoint_prefix}")
+
+  return model
 
 
-def sample(models, config):
 
-  one_step_models = []
-  for model in models:
-    one_step_models.append(OneStep(model))
-  states = [None, None, None, None]
-  next_char = tf.constant([[[4, 1, 1, 1]]], dtype=tf.int64)
-  result = [next_char]
+def load_model(config, training_data):
 
-  for _n in range(400):
-      pred0, states[0] = one_step_models[0].generate_one_step(
-          next_char, states=states[0])
-      pred1, states[1] = one_step_models[1].generate_one_step(
-          next_char, states=states[1])
-      pred2, states[2] = one_step_models[2].generate_one_step(
-          next_char, states=states[2])
-      pred3, states[3] = one_step_models[3].generate_one_step(
-          next_char, states=states[3])
-      next_char = tf.reshape(
-          tf.stack([pred0, pred1, pred2, pred3], axis=0), shape=[1, 1, 4])
+  checkpoint_dir = f'./results/{config.run_name}/training_checkpoints/'
+  
+  # make model
+  model = MusicRNN(
+      vocab_size=config.vocab_size,
+      embedding_dim=config.embedding_dim,
+      rnn_units=config.rnn_units)
 
-      result.append(next_char)
+  model.compile(optimizer='RMSprop', loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True))
 
-  result = tf.concat(result[1:], axis=1)
-  result = result.numpy()[0]
-  midi = get_midi_from_numbers(result, config.data_details['version'])
+  # flush inputs through to make the graph
+  for input_example_batch, target_example_batch in training_data.take(1):
+    example_batch_predictions = model(input_example_batch)
+    print(example_batch_predictions.shape, "# (batch_size, sequence_length, vocab_size)")
 
-  midi_out_dir = os.path.join("results", config.run_name, f"midi_{config.epochs}_epochs.mid")
-  # midi.save("test.mid")
-  midi.save(midi_out_dir)     
+  # load weights
+  # model.load_weights(checkpoint_dir)
+  checkpoint = tf.train.Checkpoint(model=model)
+  status = checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+  # status.assert_consumed()
+
+  return model
