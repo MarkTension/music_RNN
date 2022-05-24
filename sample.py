@@ -64,7 +64,7 @@ def sample(model, config, training_data):
 
     df.to_json(json_out_dir)
 
-    midi = get_midi_from_numbers(samples.transpose(), config.data_details['version'])
+    midi = get_midi_from_numbers(samples.transpose(), config.data_details['version'], velocities=entropies_raw)
     midi_out_dir = os.path.join("results", config.run_name, f"midi_{timestamp}_epochs_{config.epochs}_temp_{temperature}.mid")
     # midi.save("test.mid")
     midi.save(midi_out_dir)

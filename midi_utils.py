@@ -18,6 +18,10 @@ def get_midi_from_numbers(source, version, velocities=None):
   mid.type = 1
   voices = []
 
+  # normalize velocities
+  velocities = np.minimum(np.floor((velocities / np.max(velocities)) * 128).astype(np.int32),127)
+
+
   # for each voice make a midi track
   for voice in range(4):
     track = MidiTrack()
@@ -40,7 +44,7 @@ def get_midi_from_numbers(source, version, velocities=None):
         if (i != 0): 
           voices[voice].append(Message('note_off', note=np.int(actionKindPrevious), velocity=80, time=notelength*60))
         # start new note
-        voices[voice].append(Message('note_on', note=np.int(event), velocity=80, time=0))
+        voices[voice].append(Message('note_on', note=np.int(event), velocity=velocities[voice, i], time=0))
         notelength=0
       # else:
       notelength+=1

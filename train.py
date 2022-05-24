@@ -5,7 +5,17 @@ from model import MusicRNN
 import os
 
 
-def train(training_data,  config):
+def train(training_data, config) -> MusicRNN:
+  """
+  trains the RNN
+
+  Args:
+      training_data tf.Data.dataset: tf.
+      config dictionary: _description_
+
+  Returns:
+      MusicRNN: fully trained RNN
+  """
 
   # for some reason CPU is faster to train
   os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -69,7 +79,7 @@ def train(training_data,  config):
 
 
 
-def load_model(config, training_data):
+def load_model(config, training_data)->MusicRNN:
 
   checkpoint_dir = f'./results/{config.run_name}/training_checkpoints/'
   

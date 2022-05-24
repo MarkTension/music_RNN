@@ -168,7 +168,7 @@ class Dataclass:
 
 
   def _convert_to_json(self, df, version):
-  
+    
     example_df = df.drop(['time'], axis=1) + 36
     example_df.to_json(f"example_json_version_{version}.json")
 
@@ -198,8 +198,8 @@ class Dataclass:
 
     dataset = (
         dataset
-        .shuffle(BUFFER_SIZE)
         .batch(BATCH_SIZE, drop_remainder=True)
+        .shuffle(BUFFER_SIZE)
         .cache()
         .prefetch(tf.data.experimental.AUTOTUNE))
 
