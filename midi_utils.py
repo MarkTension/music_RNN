@@ -18,8 +18,11 @@ def get_midi_from_numbers(source, version, velocities=None):
   mid.type = 1
   voices = []
 
+  timedelta = 120
+
   # normalize velocities
-  velocities = np.minimum(np.floor((velocities / np.max(velocities)) * 128).astype(np.int32),127)
+  if velocities is not None:
+    velocities = np.minimum(np.floor((velocities / np.max(velocities)) * 128).astype(np.int32),127)
 
 
   # for each voice make a midi track
@@ -42,16 +45,20 @@ def get_midi_from_numbers(source, version, velocities=None):
       if (event!=actionKindPrevious):
         # if not first note, end previous note
         if (i != 0): 
-          voices[voice].append(Message('note_off', note=np.int(actionKindPrevious), velocity=80, time=notelength*60))
+          voices[voice].append(Message('note_off', note=np.int(actionKindPrevious), velocity=80, time=notelength*timedelta))
         # start new note
-        voices[voice].append(Message('note_on', note=np.int(event), velocity=velocities[voice, i], time=0))
+        if velocities is None:
+          velocity = 80
+        else:
+          velocity = velocities[voice, i]
+        voices[voice].append(Message('note_on', note=np.int(event), velocity=velocity, time=0))
         notelength=0
       # else:
       notelength+=1
       actionKindPrevious = event
 
       if (i == len(source) - 2 and notelength > 0):
-        voices[voice].append(Message('note_off', note=np.int(event), velocity=80, time=(notelength+1)*60)) 
+        voices[voice].append(Message('note_off', note=np.int(event), velocity=80, time=(notelength+1)*timedelta)) 
       
       actionKindPrevious = event
       # notelength+=1

@@ -17,15 +17,18 @@ class Dataclass:
     print('ínitialized data class')
 
   def get_training_data(self):
-    midi_file = self._load_or_create_data()
-    return midi_file
+    training_data, valid_data = self._load_or_create_data()
+    return training_data, valid_data
 
   def _load_or_create_data(self):
     data_out = os.path.join(self.data_details.out, self.data_details.version)
 
     if os.path.exists(data_out):
+      
       # load data
-      return tf.data.experimental.load(data_out)
+      train = tf.data.experimental.load(os.path.join(data_out, "train"))
+      valid = tf.data.experimental.load(os.path.join(data_out, "valid"))
+      return train, valid
     else:
       print("making new data")
 
@@ -33,13 +36,16 @@ class Dataclass:
       path = os.path.join(self.data_details.out, self.data_details.version)
       os.makedirs(path)
       os.makedirs(os.path.join(path, 'transposed'))
+      os.makedirs(os.path.join(path, "train"))
+      os.makedirs(os.path.join(path, "valid"))
       # create data
-      training_data = self._create_dataset()
+      training_data, valid_data = self._create_dataset()
 
       # save dataset
-      tf.data.experimental.save(training_data, data_out)
+      tf.data.experimental.save(training_data, os.path.join(data_out, "train"))
+      tf.data.experimental.save(valid_data, os.path.join(data_out, "valid"))
 
-      return training_data
+      return training_data, valid_data
 
 
   def _create_dataset(self):
@@ -78,18 +84,26 @@ class Dataclass:
     if (not os.path.exists(transpositions_path)):
       np.save(transpositions_path, transpositions)
 
-    training_data = pd.concat(training_data)
-    training_data = training_data.to_numpy()
-    tf_dataset = self._create_tf_data(training_data)
+    training_data = pd.concat(training_data).to_numpy()
+    training_data, valid_data = self._split(training_data)
 
-    return tf_dataset
+    # repeat in different orders
+    training_data = np.concatenate([training_data, training_data[4:], training_data[7:], training_data[11:], training_data[15:]])
 
-  # def _load_data(self, datapath):
-  #     files = os.listdir(datapath)
-  #     dfs = []
-  #     for chorale in files:
-  #       dfs.append(pd.read_csv(f'{datapath}/{chorale}'))
-  #     return dfs
+    tf_dataset_train = self._create_tf_data(training_data)
+    tf_dataset_valid = self._create_tf_data(valid_data)
+    
+    return tf_dataset_train, tf_dataset_valid
+
+
+  def _split(self, data):
+    """splits into training and validation data"""
+
+    split = int(np.rint(len(data) / 20))
+    valid_data = data[:split]
+    training_data = data[split:]
+
+    return training_data, valid_data
 
   def _load_data(self, datapath):
 
@@ -175,33 +189,32 @@ class Dataclass:
 
   def _create_tf_data(self, training_data):
 
-    # tf solution
-    training_data_tf = tf.data.Dataset.from_tensor_slices(training_data)
-    # example
-    for ids in training_data_tf.take(10):
-        print(ids)
-    
-    print(f"examples per epoch is {len(training_data)}")
-
-    sequences = training_data_tf.batch(self.data_details.seq_length+1, drop_remainder=True)
-
     def split_input_target(sequence):
       input_text = sequence[:-1]
       target_text = sequence[-1:]
       return input_text, target_text
-
-    dataset = sequences.map(split_input_target)
+      
+    def random_start(dataset):
+      dataset = dataset[tf.random.uniform(shape=(), minval=1, maxval=5, dtype=tf.int32):]
+      return dataset
 
     # Batch size
     BATCH_SIZE = 64
     BUFFER_SIZE = 10000
 
+    # tf solution
+    dataset = tf.data.Dataset.from_tensor_slices(training_data)
+    # dataset = dataset.map(random_start)
+    # TODO: do multiple splits on different intervals
     dataset = (
         dataset
+        # .map(random_start)
+        .batch(self.data_details.seq_length+1, drop_remainder=True)
+        .map(split_input_target)
         .batch(BATCH_SIZE, drop_remainder=True)
-        .shuffle(BUFFER_SIZE)
-        .cache()
-        .prefetch(tf.data.experimental.AUTOTUNE))
+        .shuffle(BUFFER_SIZE, reshuffle_each_iteration=True)
+        .cache() # what is this?
+        .prefetch(tf.data.experimental.AUTOTUNE)) # what is this?
 
     return dataset
 

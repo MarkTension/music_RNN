@@ -4,17 +4,17 @@ data_details :
   # raw : "./data/jsb_chorales/all"
   raw : "./data/jsb_chorales/jsb16thSeparated.json"
   out : "./data/jsb_chorales/processed"
-  version: "version_6_shuffle_issue_solved" # used to be 8th
+  version: "version_8_repeated_abberations_dropout" # used to be 8th
   seq_length: 128
   token_empty_note: 18 # change this back
   token_reset_song: 19
 
 
-epochs: 100
-rnn_units : 256
+epochs: 18
+rnn_units : 128
 embedding_dim: 32
 vocab_size: 86  # 12 notes + reset token(12)  reset song token is always incorrect + no-note(13)
-run_name : 'v21_shuffling_solved' #"v19_new_architecture_better_data_bigger_rnn" # v5_8th_notes_seq_32_transposed was goood
+run_name : 'v33_no_sequences_3grus_o' #"v19_new_architecture_better_data_bigger_rnn" # v5_8th_notes_seq_32_transposed was goood
 
-num_notes_sampled: 60
-sampling_mode: True
+num_notes_sampled: 90
+sampling_mode: False

@@ -14,18 +14,20 @@ from train import train, load_model
 
 # TODO:
 # - refactor code. make training etc easier
-#    - results directory
-#    - data directory
 #    - checkpoint loading
 # - experiment with more models
-#     - experiment with bigger models
+#     - using last output of rnn only
+#     - using pitch normalization instead of embedding
+#     - check if timing data actually works
+#     - 
+
 
 
 def main(config):
 
   print('creating data')
   dataLoader = Dataclass(dotdict(config.data_details))
-  training_data = dataLoader.get_training_data()
+  training_data, valid_data = dataLoader.get_training_data()
 
   # creat hmm model
   # model = hmm.GaussianHMM(n_components=12, covariance_type="full")
@@ -36,7 +38,7 @@ def main(config):
   # The embedding dimension
   if (not config.sampling_mode):
     print('starting training')
-    model = train(training_data, config)
+    model = train(training_data, valid_data, config)
   if model == None:
     model = load_model(config, training_data)
   print('sampling, and generating midi')

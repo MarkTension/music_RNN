@@ -30,7 +30,7 @@ def sample(model, config, training_data):
     
     training_data = training_data.shuffle(32)
     dataset =  training_data.take(1)
-    input = tf.constant(list(dataset.as_numpy_iterator())[0][0][:1])
+    input = tf.constant(list(dataset.as_numpy_iterator())[0][0][:1])#[:,:10,:]
 
     # sample loop
     for _n in range(config.num_notes_sampled * 4):
@@ -51,7 +51,7 @@ def sample(model, config, training_data):
     # reconstruct og format
     samples = output_raw_to_voices(samples)
     attentions = np.mean(output_raw_to_voices(np.array(attentions)), axis=0)
-    probabilities = np.mean(output_raw_to_voices(probabilities), axis=0)
+    probabilities = np.max(np.mean(output_raw_to_voices(probabilities), axis=0), axis=0)
     entropies_raw = output_raw_to_voices(entropies)
     entropies = np.mean(output_raw_to_voices(entropies), axis=0)
 
