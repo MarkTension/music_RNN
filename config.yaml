@@ -4,17 +4,18 @@ data_details :
   # raw : "./data/jsb_chorales/all"
   raw : "./data/jsb_chorales/jsb16thSeparated.json"
   out : "./data/jsb_chorales/processed"
-  version: "version_8_repeated_abberations_dropout" # used to be 8th
+  version: "version_8_repeated_abberations_dropout" # version_8_repeated_abberations_dropout
   seq_length: 128
   token_empty_note: 18 # change this back
   token_reset_song: 19
 
 
-epochs: 18
+learning_rate: 0.0001
+epochs: 70
 rnn_units : 128
 embedding_dim: 32
-vocab_size: 86  # 12 notes + reset token(12)  reset song token is always incorrect + no-note(13)
-run_name : 'v33_no_sequences_3grus_o' #"v19_new_architecture_better_data_bigger_rnn" # v5_8th_notes_seq_32_transposed was goood
+vocab_size: 86    # 12 notes + reset token(12)  reset song token is always incorrect + no-note(13)
+run_name : 'v46'  # v42 was very goooood!
 
-num_notes_sampled: 90
+num_notes_sampled: 120
 sampling_mode: False

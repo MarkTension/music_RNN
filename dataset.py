@@ -73,6 +73,11 @@ class Dataclass:
       # normalize to one octave again after transpose
       # refill empty notes after transpose
       df[empty_notes_df == np.nan] = self.data_details.token_empty_note
+
+      # detect changes
+      for col in df.columns:
+        df[col + "_changed"] = 1 - (df[col].shift(periods=1) == df[col])
+
       # set tempo
       df = self._set_tempo_data(df)
       # make sequential
@@ -84,7 +89,9 @@ class Dataclass:
     if (not os.path.exists(transpositions_path)):
       np.save(transpositions_path, transpositions)
 
-    training_data = pd.concat(training_data).to_numpy()
+    training_data = pd.concat(training_data)
+
+    training_data = training_data.to_numpy()
     training_data, valid_data = self._split(training_data)
 
     # repeat in different orders
@@ -153,6 +160,7 @@ class Dataclass:
   def _make_sequential(self, df):
     
     notes = []
+    on_off = []
     timings = []
 
     for _, row in df.iterrows():
@@ -162,8 +170,12 @@ class Dataclass:
       notes.append(row.note2)
       notes.append(row.note1)
       notes.append(row.note3)
+      on_off.append(row.note0_changed)
+      on_off.append(row.note1_changed)
+      on_off.append(row.note2_changed)
+      on_off.append(row.note3_changed)
 
-    df = pd.DataFrame({"notes": notes, "timings": timings})
+    df = pd.DataFrame({"notes": notes, "timings": timings, "onoff": on_off})
     return df
 
   def _set_tempo_data(self, df):
@@ -201,9 +213,12 @@ class Dataclass:
     # Batch size
     BATCH_SIZE = 64
     BUFFER_SIZE = 10000
-
+    # training_data = training_data.astype(np.float32)
     # tf solution
+    dataset = tf.convert_to_tensor(training_data, dtype=tf.float32)
     dataset = tf.data.Dataset.from_tensor_slices(training_data)
+    dataset = dataset.map(lambda x: tf.cast(x, tf.float32))
+    # dataset = 
     # dataset = dataset.map(random_start)
     # TODO: do multiple splits on different intervals
     dataset = (
@@ -212,8 +227,8 @@ class Dataclass:
         .batch(self.data_details.seq_length+1, drop_remainder=True)
         .map(split_input_target)
         .batch(BATCH_SIZE, drop_remainder=True)
-        .shuffle(BUFFER_SIZE, reshuffle_each_iteration=True)
         .cache() # what is this?
+        .shuffle(BUFFER_SIZE, reshuffle_each_iteration=True)
         .prefetch(tf.data.experimental.AUTOTUNE)) # what is this?
 
     return dataset
@@ -227,5 +242,3 @@ def map_to_fourths(n):
       return 2
     else:
       return 3
-
-  

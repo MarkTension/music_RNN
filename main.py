@@ -29,11 +29,6 @@ def main(config):
   dataLoader = Dataclass(dotdict(config.data_details))
   training_data, valid_data = dataLoader.get_training_data()
 
-  # creat hmm model
-  # model = hmm.GaussianHMM(n_components=12, covariance_type="full")
-  # model.fit(training_data)
-  # feature_matrix , state_sequence = model.sample(100)
-
   model = None
   # The embedding dimension
   if (not config.sampling_mode):
@@ -65,6 +60,7 @@ if __name__ == "__main__":
 
   # make dirs
   if (not os.path.exists(f"results/{config_dot.run_name}")):
+    
     os.makedirs(f"results/{config_dot.run_name}")
     os.makedirs(f"results/{config_dot.run_name}/training_checkpoints")
 
